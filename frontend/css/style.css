@@ -1,0 +1,234 @@
+/* Samsung TV Remote Pro - Styles */
+
+* {
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    background: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 100%);
+    font-family: -apple-system, 'SF Pro Display', system-ui, Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* Remote Container */
+.remote {
+    max-width: 400px;
+    width: 100%;
+    background: rgba(30, 30, 35, 0.7);
+    backdrop-filter: blur(20px);
+    border-radius: 52px;
+    padding: 24px 20px 32px;
+    box-shadow: 0 25px 45px rgba(0, 0, 0, 0.4),
+                0 0 1px rgba(255, 255, 255, 0.1) inset;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Status Bar */
+.status {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 30px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    backdrop-filter: blur(5px);
+}
+
+.tv-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+}
+
+.led {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #34c759;
+    box-shadow: 0 0 8px rgba(52, 199, 89, 0.6);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* D-Pad Navigation */
+.dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+/* Buttons */
+.btn {
+    background: rgba(60, 60, 65, 0.9);
+    border: none;
+    color: white;
+    font-size: 24px;
+    padding: 16px;
+    border-radius: 60px;
+    cursor: pointer;
+    transition: all 0.05s linear;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                0 1px 2px rgba(255, 255, 255, 0.05) inset;
+    font-weight: 500;
+    outline: none;
+}
+
+.btn:active {
+    transform: scale(0.94);
+    background: rgba(58, 110, 165, 0.9);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4),
+                0 0 0 3px rgba(58, 110, 165, 0.3);
+}
+
+.btn:hover {
+    background: rgba(70, 70, 75, 0.95);
+}
+
+.btn-sm {
+    font-size: 12px;
+    padding: 10px;
+    border-radius: 50px;
+}
+
+/* Grid Layouts */
+.row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.apps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+}
+
+/* App Buttons */
+.app-btn {
+    background: rgba(45, 45, 50, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 14px 8px;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: all 0.05s linear;
+    text-align: center;
+}
+
+.app-btn:active {
+    transform: scale(0.92);
+    background: rgba(58, 110, 165, 0.95);
+}
+
+.app-btn:hover {
+    background: rgba(55, 55, 60, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Typography */
+h3 {
+    color: #8e8e93;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    margin: 15px 0 8px 0;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    margin-top: 20px;
+    color: #48484a;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .remote {
+        max-width: 100%;
+        border-radius: 40px;
+        padding: 20px 16px 24px;
+    }
+
+    .btn {
+        font-size: 20px;
+        padding: 14px;
+    }
+
+    .btn-sm {
+        font-size: 11px;
+        padding: 9px;
+    }
+
+    .app-btn {
+        font-size: 10px;
+        padding: 12px 6px;
+    }
+}
+
+/* Loading State */
+.loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Error State */
+.error {
+    background: rgba(255, 59, 48, 0.1);
+    border-color: rgba(255, 59, 48, 0.3);
+    color: #ff3b30;
+}
+
+/* Success Animation */
+@keyframes success {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.btn:active::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 60px;
+    box-shadow: 0 0 0 10px rgba(58, 110, 165, 0.2);
+    animation: ripple 0.6s;
+}
+
+@keyframes ripple {
+    0% {
+        box-shadow: 0 0 0 0 rgba(58, 110, 165, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 0 20px rgba(58, 110, 165, 0);
+    }
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <title>Samsung TV Remote Pro</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="remote">
+    <!-- Status Bar -->
+    <div class="status">
+        <div class="tv-info">
+            <div class="led"></div>
+            <span>Samsung TV connectée</span>
+        </div>
+    </div>
+
+    <!-- Navigation D-Pad -->
+    <div class="dpad">
+        <div></div>
+        <button class="btn" data-key="KEY_UP" title="Naviguer vers le haut">▲</button>
+        <div></div>
+        <button class="btn" data-key="KEY_LEFT" title="Naviguer vers la gauche">◀</button>
+        <button class="btn" data-key="KEY_ENTER" title="Valider la sélection">OK</button>
+        <button class="btn" data-key="KEY_RIGHT" title="Naviguer vers la droite">▶</button>
+        <div></div>
+        <button class="btn" data-key="KEY_DOWN" title="Naviguer vers le bas">▼</button>
+        <div></div>
+    </div>
+
+    <!-- Control Row 1: Volume & Navigation -->
+    <div class="row">
+        <button class="btn btn-sm" data-key="KEY_VOLUP" title="Augmenter le volume">🔊 +</button>
+        <button class="btn btn-sm" data-key="KEY_VOLDOWN" title="Diminuer le volume">🔊 -</button>
+        <button class="btn btn-sm" data-key="KEY_MUTE" title="Couper le son">🔇 Muet</button>
+        <button class="btn btn-sm" data-key="KEY_HOME" title="Aller à l'accueil">🏠 Home</button>
+    </div>
+
+    <!-- Control Row 2: Menu & Info -->
+    <div class="row">
+        <button class="btn btn-sm" data-key="KEY_RETURN" title="Retour arrière">↩ Retour</button>
+        <button class="btn btn-sm" data-key="KEY_GUIDE" title="Guide EPG">📺 Guide</button>
+        <button class="btn btn-sm" data-key="KEY_SOURCE" title="Sélecteur de source">📡 Source</button>
+        <button class="btn btn-sm" data-key="KEY_INFO" title="Informations">ℹ️ Info</button>
+    </div>
+
+    <!-- Chaînes -->
+    <div class="row">
+        <button class="btn btn-sm" data-key="KEY_CHUP" title="Chaîne suivante">CH +</button>
+        <button class="btn btn-sm" data-key="KEY_CHDOWN" title="Chaîne précédente">CH -</button>
+        <button class="btn btn-sm" data-key="KEY_MENU" title="Afficher le menu">📋 Menu</button>
+        <button class="btn btn-sm" data-key="KEY_EXIT" title="Quitter l'application">❌ Exit</button>
+    </div>
+
+    <!-- Applications Section -->
+    <h3>✨ APPLICATIONS</h3>
+    <div class="apps-grid">
+        <button class="app-btn" data-app="NETFLIX" title="Lancer Netflix">📺 Netflix</button>
+        <button class="app-btn" data-app="YOUTUBE" title="Lancer YouTube">🎬 YouTube</button>
+        <button class="app-btn" data-app="PRIME_VIDEO" title="Lancer Prime Video">📦 Prime</button>
+        <button class="app-btn" data-app="DISNEY_PLUS" title="Lancer Disney+">✨ Disney+</button>
+        <button class="app-btn" data-app="APPLE_TV" title="Lancer Apple TV">🍎 Apple TV</button>
+        <button class="app-btn" data-app="SPOTIFY" title="Lancer Spotify">🎵 Spotify</button>
+        <button class="app-btn" data-app="BROWSER" title="Ouvrir le navigateur">🌐 Browser</button>
+        <button class="app-btn" data-app="PLEX" title="Lancer Plex">🎬 Plex</button>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        Samsung TV Pro Remote • v1.0.0
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/app.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Samsung Remote Pro</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 100%);
+            font-family: -apple-system, 'SF Pro Display', system-ui, Helvetica, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .remote {
+            max-width: 400px;
+            width: 100%;
+            background: rgba(30, 30, 35, 0.7);
+            backdrop-filter: blur(20px);
+            border-radius: 52px;
+            padding: 24px 20px 32px;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .status {
+            background: rgba(0,0,0,0.5);
+            border-radius: 30px;
+            padding: 10px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .tv-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fff;
+        }
+
+        .led {
+            width: 10px;
+            height: 10px;
+            border-radius: 10px;
+            background: #34c759;
+            box-shadow: 0 0 8px #34c759;
+        }
+
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: rgba(60,60,65,0.9);
+            border: none;
+            color: white;
+            font-size: 24px;
+            padding: 16px;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: 0.05s linear;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-weight: 500;
+        }
+
+        .btn:active {
+            transform: scale(0.94);
+            background: #3a6ea5;
+        }
+
+        .btn-sm {
+            font-size: 14px;
+            padding: 12px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .app-btn {
+            background: #2c2c32;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 12px 8px;
+        }
+
+        h3 {
+            color: #8e8e93;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            margin: 15px 0 8px 0;
+            font-weight: 500;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 15px;
+            color: #48484a;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="remote">
+    <div class="status">
+        <div class="tv-info">
+            <div class="led"></div>
+            <span>Samsung TV connectée</span>
+        </div>
+    </div>
+
+    <!-- D-Pad -->
+    <div class="dpad">
+        <div></div>
+        <button class="btn" data-key="KEY_UP">▲</button>
+        <div></div>
+        <button class="btn" data-key="KEY_LEFT">◀</button>
+        <button class="btn" data-key="KEY_ENTER">OK</button>
+        <button class="btn" data-key="KEY_RIGHT">▶</button>
+        <div></div>
+        <button class="btn" data-key="KEY_DOWN">▼</button>
+        <div></div>
+    </div>
+
+    <!-- Volume + Navigation -->
+    <div class="row">
+        <button class="btn btn-sm" data-key="KEY_VOLUP">🔊 +</button>
+        <button class="btn btn-sm" data-key="KEY_VOLDOWN">🔊 -</button>
+        <button class="btn btn-sm" data-key="KEY_MUTE">🔇 Muet</button>
+        <button class="btn btn-sm" data-key="KEY_HOME">🏠 Home</button>
+    </div>
+
+    <div class="row">
+        <button class="btn btn-sm" data-key="KEY_RETURN">↩ Retour</button>
+        <button class="btn btn-sm" data-key="KEY_GUIDE">📺 Guide</button>
+        <button class="btn btn-sm" data-key="KEY_SOURCE">📡 Source</button>
+        <button class="btn btn-sm" data-key="KEY_INFO">ℹ️ Info</button>
+    </div>
+
+    <!-- Apps (CES QUI MARCHENT VRAIMENT !) -->
+    <h3>✨ APPLICATIONS</h3>
+    <div class="apps-grid">
+        <button class="app-btn" data-app="NETFLIX">📺 Netflix</button>
+        <button class="app-btn" data-app="YOUTUBE">🎬 YouTube</button>
+        <button class="app-btn" data-app="PRIME_VIDEO">📦 Prime</button>
+        <button class="app-btn" data-app="DISNEY_PLUS">✨ Disney+</button>
+        <button class="app-btn" data-app="APPLE_TV">🍎 Apple TV</button>
+        <button class="app-btn" data-app="SPOTIFY">🎵 Spotify</button>
+        <button class="app-btn" data-app="BROWSER">🌐 Browser</button>
+        <button class="app-btn" data-app="PLEX">🎬 Plex</button>
+    </div>
+
+    <div class="footer">
+        Samsung TV Pro Remote • Appuye et ça marche !
+    </div>
+</div>
+
+<script>
+    async function sendKey(key) {
+        try {
+            const res = await fetch(`/key/${key}`);
+            const data = await res.json();
+            if (data.success && navigator.vibrate) {
+                navigator.vibrate(15);
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    async function launchApp(appName) {
+        try {
+            const res = await fetch(`/app/${appName}`);
+            const data = await res.json();
+            if (data.success && navigator.vibrate) {
+                navigator.vibrate(15);
+                console.log(`✅ Lancement de ${appName}`);
+            } else {
+                console.error(`❌ Échec: ${data.error}`);
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    // Boutons de navigation
+    document.querySelectorAll('[data-key]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const key = btn.getAttribute('data-key');
+            sendKey(key);
+        });
+    });
+
+    // Boutons d'applications
+    document.querySelectorAll('[data-app]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const app = btn.getAttribute('data-app');
+            launchApp(app);
+        });
+    });
+</script>
+</body>
+</html>
