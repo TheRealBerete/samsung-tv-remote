@@ -133,6 +133,16 @@ def index():
     """Servir l'interface HTML principale"""
     return send_from_directory(FRONTEND_DIR, 'index.html')
 
+@app.route('/css/<path:filename>')
+def serve_css(filename):
+    """Servir les fichiers CSS"""
+    return send_from_directory(os.path.join(FRONTEND_DIR, 'css'), filename)
+
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    """Servir les fichiers JavaScript"""
+    return send_from_directory(os.path.join(FRONTEND_DIR, 'js'), filename)
+
 @app.route('/key/<cmd>')
 def key_route(cmd):
     """
