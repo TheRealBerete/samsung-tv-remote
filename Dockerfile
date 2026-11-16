@@ -13,7 +13,7 @@ COPY backend ./backend
 COPY config ./config
 COPY frontend ./frontend
 
-RUN mkdir -p /data && useradd -r -u 10001 remote && chown remote /data
+RUN mkdir -p /data && useradd -r -m -u 10001 remote && chown remote /data
 USER remote
 
 EXPOSE 5000
