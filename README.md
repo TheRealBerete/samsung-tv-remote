@@ -4,52 +4,72 @@ Une application web moderne pour contrôler votre TV Samsung à distance via une
 
 ## 🎯 Fonctionnalités
 
-- ✅ Contrôle complet de la TV (navigation, volume, chaînes)
-- ✅ Lancement d'applications directement depuis l'interface
-- ✅ Authentification tokenisée (sauvegarde automatique)
-- ✅ Interface web responsive et intuitive
-- ✅ Support HTTPS/WSS pour sécurité maximale
-- ✅ Token persistent entre les redémarrages
+- ✅ Télécommande au design réaliste, pensée pour iPhone (ajout à l'écran d'accueil)
+- ✅ Navigation, volume, chaînes, lecture, touches couleur, appui long qui répète
+- ✅ Lancement d'applications (Netflix, YouTube, Prime Video, Disney+…)
+- ✅ Allumage de la TV depuis le téléphone (Wake-on-LAN)
+- ✅ Connexion WebSocket persistante (réactive, une seule autorisation sur la TV)
+- ✅ Port 8002 (wss + token) avec repli automatique sur 8001 (TV 2016-2017)
+- ✅ Statut en direct : TV allumée, en veille ou introuvable
+- ✅ Déploiement Docker Compose
 
 ## 📋 Prérequis
 
-- **Python 3.8+**
-- **pip** (gestionnaire de paquets Python)
-- **Une TV Samsung compatible** (modèles récents avec port 8002)
-- Réseau local avec connexion à la TV
+- Python 3.9+ **ou** Docker
+- Une TV Samsung Tizen (2016 et plus récentes) sur le même réseau
 
-## 🚀 Installation rapide
+## 🚀 Démarrage rapide
 
-### 1️⃣ Cloner le projet
+### Option A — Docker Compose (recommandé, Linux / Raspberry Pi / NAS)
 
 ```bash
 git clone https://github.com/TheRealBerete/samsung-tv-remote.git
 cd samsung-tv-remote
+cp .env.example .env      # puis renseigne TV_IP (et TV_MAC pour l'allumage)
+docker compose up -d --build
 ```
 
-### 2️⃣ Installer les dépendances
+> Le conteneur utilise `network_mode: host` pour joindre la TV et envoyer le
+> Wake-on-LAN. Sur Docker Desktop (Windows/macOS), le mode host n'est pas
+> toujours disponible : utilise plutôt l'option B.
+
+### Option B — Python
 
 ```bash
 pip install -r requirements.txt
+cp .env.example .env      # ou exporte TV_IP=192.168.x.x
+python run.py             # Windows : run.bat
 ```
 
-### 3️⃣ Configurer votre TV
+Le terminal affiche l'adresse à ouvrir sur le téléphone, par ex. `http://192.168.18.12:5000`.
 
-Modifiez `config/settings.py` avec l'adresse IP de votre TV :
+### Sur l'iPhone
 
-```python
-TV_IP = "192.168.1.XX"  # 👈 Votre adresse IP locale
-```
+1. Ouvre l'adresse dans Safari (même Wi-Fi que la TV et le serveur).
+2. À la première touche, la TV demande l'autorisation : choisis **Autoriser**.
+3. Partager → **Sur l'écran d'accueil** pour l'avoir comme une app.
 
-### 4️⃣ Lancer le serveur
+### Configuration (`.env`)
 
-```bash
-python backend/app.py
-```
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `TV_IP` | `192.168.18.49` | IP locale de la TV |
+| `TV_PORT` | `8002` | `8002` (wss + token) ou `8001` (ws) — repli auto sur l'autre |
+| `TV_MAC` | vide | MAC de la TV pour l'allumer (activer aussi « Allumer avec mobile » sur la TV) |
+| `FLASK_PORT` | `5000` | Port de l'interface |
+| `FLASK_DEBUG` | `false` | Mode debug Flask |
 
-L'application sera accessible à :
-- **Interface web** : http://localhost:5000
-- **API REST** : http://localhost:5000/api/
+### API
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| `POST` | `/key/<KEY_*>` | Envoie une touche (`KEY_VOLUP`, `KEY_ENTER`…) |
+| `POST` | `/app/<NOM>` | Lance une app (`NETFLIX`, `YOUTUBE`…) |
+| `POST` | `/power/on` | Allume la TV (Wake-on-LAN) |
+| `GET` | `/status` | État de la TV et de la connexion |
+| `GET` | `/keys`, `/apps` | Listes disponibles |
+
+Les erreurs renvoient un code `4xx/5xx` avec `{"success": false, "error": "…"}`.
 
 ## 📡 Architecture
 
