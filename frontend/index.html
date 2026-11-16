@@ -1,81 +1,119 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#000000">
-    <title>Samsung TV Remote Pro</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0e0e10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Remote">
+  <title>TV Remote</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<div class="remote">
-    <!-- Status Bar -->
-    <div class="status">
-        <div class="tv-info">
-            <div class="led"></div>
-            <span>Samsung TV connectée</span>
-        </div>
+<main class="remote" aria-label="Télécommande TV">
+
+  <!-- Tête : LED, power, source -->
+  <div class="head">
+    <span class="ir" aria-hidden="true"><span class="led" id="led"></span></span>
+    <div class="head-row">
+      <button class="key round power" data-key="KEY_POWER" aria-label="Marche / arrêt">
+        <svg viewBox="0 0 24 24"><path d="M12 3v8M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>
+      </button>
+      <span class="mic" aria-hidden="true"></span>
+      <button class="key round" data-key="KEY_SOURCE" aria-label="Source">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="1.5"/><path d="M8 21h8M10 10.5h5m-2-2l2 2-2 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Raccourcis -->
+  <div class="row trio">
+    <button class="key pill" data-key="KEY_MENU">MENU</button>
+    <button class="key pill" data-key="KEY_GUIDE">GUIDE</button>
+    <button class="key pill" data-key="KEY_INFO">INFO</button>
+  </div>
+
+  <!-- Anneau directionnel -->
+  <div class="dpad">
+    <div class="ring">
+      <button class="arc up" data-key="KEY_UP" data-repeat aria-label="Haut"><i></i></button>
+      <button class="arc right" data-key="KEY_RIGHT" data-repeat aria-label="Droite"><i></i></button>
+      <button class="arc down" data-key="KEY_DOWN" data-repeat aria-label="Bas"><i></i></button>
+      <button class="arc left" data-key="KEY_LEFT" data-repeat aria-label="Gauche"><i></i></button>
+    </div>
+    <button class="ok" data-key="KEY_ENTER" aria-label="OK"></button>
+  </div>
+
+  <!-- Retour / Accueil / Lecture -->
+  <div class="row trio">
+    <button class="key round" data-key="KEY_RETURN" aria-label="Retour">
+      <svg viewBox="0 0 24 24"><path d="M9 5L4 10l5 5M4 10h10a5 5 0 0 1 0 10h-3"/></svg>
+    </button>
+    <button class="key round home" data-key="KEY_HOME" aria-label="Accueil">
+      <svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>
+    </button>
+    <button class="key round" data-key="KEY_PLAY" aria-label="Lecture / pause">
+      <svg viewBox="0 0 24 24"><path d="M5 5l8 7-8 7z" class="fill"/><path d="M16 5v14M20 5v14"/></svg>
+    </button>
+  </div>
+
+  <!-- Basculeurs VOL / CH -->
+  <div class="rockers">
+    <div class="rocker">
+      <button data-key="KEY_VOLUP" data-repeat aria-label="Volume +">+</button>
+      <span>VOL</span>
+      <button data-key="KEY_VOLDOWN" data-repeat aria-label="Volume -">−</button>
     </div>
 
-    <!-- Navigation D-Pad -->
-    <div class="dpad">
-        <div></div>
-        <button class="btn" data-key="KEY_UP" title="Naviguer vers le haut">▲</button>
-        <div></div>
-        <button class="btn" data-key="KEY_LEFT" title="Naviguer vers la gauche">◀</button>
-        <button class="btn" data-key="KEY_ENTER" title="Valider la sélection">OK</button>
-        <button class="btn" data-key="KEY_RIGHT" title="Naviguer vers la droite">▶</button>
-        <div></div>
-        <button class="btn" data-key="KEY_DOWN" title="Naviguer vers le bas">▼</button>
-        <div></div>
+    <div class="mid">
+      <button class="key round sm" data-key="KEY_MUTE" aria-label="Muet">
+        <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l4 6m0-6l-4 6"/></svg>
+      </button>
+      <button class="key round sm" data-key="KEY_EXIT" aria-label="Quitter">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
     </div>
 
-    <!-- Control Row 1: Volume & Navigation -->
-    <div class="row">
-        <button class="btn btn-sm" data-key="KEY_VOLUP" title="Augmenter le volume">🔊 +</button>
-        <button class="btn btn-sm" data-key="KEY_VOLDOWN" title="Diminuer le volume">🔊 -</button>
-        <button class="btn btn-sm" data-key="KEY_MUTE" title="Couper le son">🔇 Muet</button>
-        <button class="btn btn-sm" data-key="KEY_HOME" title="Aller à l'accueil">🏠 Home</button>
+    <div class="rocker">
+      <button data-key="KEY_CHUP" data-repeat aria-label="Chaîne +">
+        <svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>
+      </button>
+      <span>CH</span>
+      <button data-key="KEY_CHDOWN" data-repeat aria-label="Chaîne -">
+        <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
     </div>
+  </div>
 
-    <!-- Control Row 2: Menu & Info -->
-    <div class="row">
-        <button class="btn btn-sm" data-key="KEY_RETURN" title="Retour arrière">↩ Retour</button>
-        <button class="btn btn-sm" data-key="KEY_GUIDE" title="Guide EPG">📺 Guide</button>
-        <button class="btn btn-sm" data-key="KEY_SOURCE" title="Sélecteur de source">📡 Source</button>
-        <button class="btn btn-sm" data-key="KEY_INFO" title="Informations">ℹ️ Info</button>
-    </div>
+  <!-- Touches d'applications -->
+  <div class="apps">
+    <button class="app" data-app="NETFLIX">NETFLIX</button>
+    <button class="app" data-app="YOUTUBE">YouTube</button>
+    <button class="app" data-app="PRIME_VIDEO">prime</button>
+    <button class="app" data-app="DISNEY_PLUS">Disney+</button>
+  </div>
 
-    <!-- Chaînes -->
-    <div class="row">
-        <button class="btn btn-sm" data-key="KEY_CHUP" title="Chaîne suivante">CH +</button>
-        <button class="btn btn-sm" data-key="KEY_CHDOWN" title="Chaîne précédente">CH -</button>
-        <button class="btn btn-sm" data-key="KEY_MENU" title="Afficher le menu">📋 Menu</button>
-        <button class="btn btn-sm" data-key="KEY_EXIT" title="Quitter l'application">❌ Exit</button>
-    </div>
+  <!-- Touches couleur -->
+  <div class="colors">
+    <button data-key="KEY_RED" class="c-red" aria-label="Rouge"></button>
+    <button data-key="KEY_GREEN" class="c-green" aria-label="Vert"></button>
+    <button data-key="KEY_YELLOW" class="c-yellow" aria-label="Jaune"></button>
+    <button data-key="KEY_CYAN" class="c-blue" aria-label="Bleu"></button>
+  </div>
 
-    <!-- Applications Section -->
-    <h3>✨ APPLICATIONS</h3>
-    <div class="apps-grid">
-        <button class="app-btn" data-app="NETFLIX" title="Lancer Netflix">📺 Netflix</button>
-        <button class="app-btn" data-app="YOUTUBE" title="Lancer YouTube">🎬 YouTube</button>
-        <button class="app-btn" data-app="PRIME_VIDEO" title="Lancer Prime Video">📦 Prime</button>
-        <button class="app-btn" data-app="DISNEY_PLUS" title="Lancer Disney+">✨ Disney+</button>
-        <button class="app-btn" data-app="APPLE_TV" title="Lancer Apple TV">🍎 Apple TV</button>
-        <button class="app-btn" data-app="SPOTIFY" title="Lancer Spotify">🎵 Spotify</button>
-        <button class="app-btn" data-app="BROWSER" title="Ouvrir le navigateur">🌐 Browser</button>
-        <button class="app-btn" data-app="PLEX" title="Lancer Plex">🎬 Plex</button>
-    </div>
+  <div class="brand">SMART REMOTE</div>
+</main>
 
-    <!-- Footer -->
-    <div class="footer">
-        Samsung TV Pro Remote • v1.0.0
-    </div>
-</div>
+<!-- Statut -->
+<button class="status" id="status" aria-live="polite">
+  <span class="dot"></span><span class="label">Recherche de la TV…</span>
+</button>
 
-<!-- Scripts -->
+<div class="toast" id="toast" role="alert"></div>
+
 <script src="js/app.js"></script>
-
 </body>
 </html>

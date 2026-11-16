@@ -1,239 +1,345 @@
 """
-Samsung TV Remote Control - Backend Flask Application
-Application web pour contrôler une TV Samsung via l'API WebSocket
+Samsung TV Remote Control - Backend Flask
+Contrôle une TV Samsung (Tizen) via son API WebSocket locale.
 
 Author: TheRealBerete
 License: MIT
 """
 
-from flask import Flask, send_from_directory, jsonify
-from flask_cors import CORS
-import websocket
-import ssl
 import json
 import os
+import socket
+import ssl
 import sys
+import threading
+import time
+import urllib.request
 
-# Ajouter le chemin du projet au sys.path
+import websocket
+from flask import Flask, jsonify, request, send_from_directory
+
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, PROJECT_ROOT)
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-from config.settings import (
-    TV_IP, TV_PORT, TV_NAME_B64, FLASK_HOST, FLASK_PORT, FLASK_DEBUG,
-    TOKEN_FILE, FRONTEND_DIR, APPS, KEYS, SSL_VERIFY
+from config.settings import (  # noqa: E402
+    APPS, FLASK_DEBUG, FLASK_HOST, FLASK_PORT, FRONTEND_DIR, KEYS,
+    TOKEN_FILE, TV_IP, TV_MAC, TV_NAME_B64, TV_PORT, TV_TIMEOUT,
 )
 
-# Initialiser l'app Flask
-app = Flask(__name__)
-CORS(app)  # Activer CORS pour les requêtes cross-origin
+app = Flask(__name__, static_folder=None)
+VALID_KEYS = set(KEYS.values())
 
-# Variable globale pour le token
-TV_TOKEN = None
 
-# ==================== Fonctions principales ====================
+# ==================== Connexion à la TV ====================
 
-def load_token():
-    """Charger le token sauvegardé"""
-    global TV_TOKEN
-    try:
-        if os.path.exists(TOKEN_FILE):
-            with open(TOKEN_FILE, "r") as f:
-                TV_TOKEN = f.read().strip()
-                print(f"📁 Token chargé : {TV_TOKEN[:20]}...")
-                return True
-    except Exception as e:
-        print(f"⚠️  Impossible de charger le token: {e}")
-    return False
-
-def save_token(token):
-    """Sauvegarder le token"""
-    global TV_TOKEN
-    TV_TOKEN = token
-    try:
-        with open(TOKEN_FILE, "w") as f:
-            f.write(token)
-        print(f"✅ Token sauvegardé : {token[:20]}...")
-        return True
-    except Exception as e:
-        print(f"❌ Erreur lors de la sauvegarde du token: {e}")
-        return False
-
-def get_ws_url():
-    """Construire l'URL WebSocket pour la TV"""
-    url = f"wss://{TV_IP}:{TV_PORT}/api/v2/channels/samsung.remote.control?name={TV_NAME_B64}"
-    if TV_TOKEN:
-        url += f"&token={TV_TOKEN}"
-    return url
-
-def send_command(method, params):
+class TVConnection:
     """
-    Fonction générique pour envoyer des commandes à la TV
-    
-    Args:
-        method (str): Méthode de l'API Samsung
-        params (dict): Paramètres de la commande
-    
-    Returns:
-        bool: True si succès, False sinon
+    Connexion WebSocket persistante vers la TV.
+
+    - Attend l'événement `ms.channel.connect` avant d'envoyer quoi que ce soit
+      (sinon la TV ignore les commandes).
+    - Réutilise la même connexion entre les appuis (plus rapide, et la TV ne
+      redemande pas l'autorisation à chaque touche).
+    - Essaie le port configuré puis l'autre (8002 wss ↔ 8001 ws).
+    - Sauvegarde / renouvelle le token renvoyé par la TV.
     """
-    global TV_TOKEN
-    try:
-        ws_url = get_ws_url()
-        
-        # Créer la connexion WebSocket
+
+    def __init__(self, ip, port, name_b64, token_file, timeout):
+        self.ip = ip
+        self.ports = [port] + [p for p in (8002, 8001) if p != port]
+        self.name_b64 = name_b64
+        self.token_file = token_file
+        self.timeout = timeout
+        self.ws = None
+        self.port = None
+        self.lock = threading.Lock()
+        self.last_error = None
+        self.token = self._load_token()
+
+    # ---------- Token ----------
+    def _load_token(self):
+        try:
+            with open(self.token_file) as f:
+                token = f.read().strip()
+                if token:
+                    print(f"📁 Token chargé : {token[:8]}…")
+                return token or None
+        except FileNotFoundError:
+            return None
+        except OSError as e:
+            print(f"⚠️  Lecture du token impossible : {e}")
+            return None
+
+    def _save_token(self, token):
+        if not token or token == self.token:
+            return
+        self.token = token
+        try:
+            with open(self.token_file, "w") as f:
+                f.write(token)
+            print(f"✅ Token sauvegardé : {token[:8]}…")
+        except OSError as e:
+            print(f"⚠️  Sauvegarde du token impossible : {e}")
+
+    def _clear_token(self):
+        self.token = None
+        try:
+            os.remove(self.token_file)
+        except OSError:
+            pass
+
+    # ---------- Connexion ----------
+    def _url(self, port):
+        scheme = "wss" if port == 8002 else "ws"
+        url = f"{scheme}://{self.ip}:{port}/api/v2/channels/samsung.remote.control?name={self.name_b64}"
+        if self.token and port == 8002:
+            url += f"&token={self.token}"
+        return url
+
+    def _open(self, port, handshake_timeout):
         ws = websocket.create_connection(
-            ws_url,
-            sslopt={"cert_reqs": ssl.CERT_NONE, "check_hostname": False}
+            self._url(port),
+            timeout=self.timeout,
+            sslopt={"cert_reqs": ssl.CERT_NONE, "check_hostname": False},
         )
-        
-        # Préparer et envoyer le payload
-        payload = {
-            "method": method,
-            "params": params
-        }
-        
-        ws.send(json.dumps(payload))
-        response = json.loads(ws.recv())
-        
-        # Sauvegarder le token s'il est fourni
-        if not TV_TOKEN and "data" in response and "token" in response["data"]:
-            save_token(response["data"]["token"])
-        
-        ws.close()
-        return True
-        
-    except Exception as e:
-        print(f"❌ Erreur: {e}")
-        return False
+        # La 1re fois, la TV affiche « Autoriser ? » : on laisse le temps de répondre.
+        ws.settimeout(handshake_timeout)
+        try:
+            while True:
+                msg = json.loads(ws.recv())
+                event = msg.get("event")
+                if event == "ms.channel.connect":
+                    self._save_token((msg.get("data") or {}).get("token"))
+                    ws.settimeout(self.timeout)
+                    return ws
+                if event == "ms.channel.unauthorized":
+                    if self.token:
+                        self._clear_token()  # token périmé → on en redemandera un
+                    raise PermissionError("Connexion refusée sur la TV (choisis « Autoriser »)")
+        except Exception:
+            ws.close()
+            raise
+
+    def _ensure(self):
+        if self.ws and self.ws.connected:
+            return
+        self.ws = None
+        errors = []
+        handshake = 5 if self.token else 30
+        for port in ([self.port] if self.port else self.ports):
+            try:
+                self.ws = self._open(port, handshake)
+                if self.port != port:
+                    print(f"🔌 Connecté à la TV sur le port {port}")
+                self.port = port
+                self.last_error = None
+                return
+            except PermissionError:
+                raise
+            except Exception as e:
+                errors.append(f"{port}: {e}")
+        self.port = None
+        raise ConnectionError("TV injoignable (" + " | ".join(errors) + ")")
+
+    def send(self, method, params):
+        payload = json.dumps({"method": method, "params": params})
+        with self.lock:
+            for attempt in range(2):  # 2e essai si la connexion gardée était morte
+                try:
+                    self._ensure()
+                    self.ws.send(payload)
+                    return True, None
+                except PermissionError as e:
+                    self.last_error = str(e)
+                    return False, self.last_error
+                except Exception as e:
+                    self.close()
+                    self.last_error = str(e)
+                    if attempt == 1:
+                        return False, self.last_error
+            return False, self.last_error
+
+    def close(self):
+        if self.ws:
+            try:
+                self.ws.close()
+            except Exception:
+                pass
+        self.ws = None
+
+    @property
+    def connected(self):
+        return bool(self.ws and self.ws.connected)
+
+
+tv = TVConnection(TV_IP, TV_PORT, TV_NAME_B64, TOKEN_FILE, TV_TIMEOUT)
+
+
+# ==================== Actions ====================
 
 def send_key(key):
-    """Envoyer une touche de télécommande"""
-    return send_command("ms.remote.control", {
+    return tv.send("ms.remote.control", {
         "Cmd": "Click",
         "DataOfCmd": key,
         "Option": "false",
-        "TypeOfRemote": "SendRemoteKey"
+        "TypeOfRemote": "SendRemoteKey",
     })
 
+
 def launch_app(app_id):
-    """Lancer une application sur la TV"""
-    return send_command("ms.channel.emit", {
+    # 1) API REST (fonctionne sur la plupart des TV 2016+)
+    try:
+        req = urllib.request.Request(
+            f"http://{TV_IP}:8001/api/v2/applications/{app_id}", method="POST", data=b""
+        )
+        with urllib.request.urlopen(req, timeout=TV_TIMEOUT) as res:
+            if res.status < 300:
+                return True, None
+    except Exception:
+        pass
+    # 2) Repli WebSocket
+    return tv.send("ms.channel.emit", {
         "event": "ed.apps.launch",
         "to": "host",
         "data": {
             "appId": app_id,
-            "action_type": "NATIVE_LAUNCH"
-        }
+            "action_type": "NATIVE_LAUNCH" if "." in app_id else "DEEP_LINK",
+        },
     })
 
-# ==================== Routes Flask ====================
 
-@app.route('/')
+def wake_on_lan(mac):
+    """Envoie un « magic packet » pour allumer la TV."""
+    mac_hex = mac.replace(":", "").replace("-", "").strip()
+    if len(mac_hex) != 12:
+        raise ValueError("TV_MAC invalide (format attendu 7C:64:56:4A:8B:AA)")
+    packet = b"\xff" * 6 + bytes.fromhex(mac_hex) * 16
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        for port in (9, 7):
+            s.sendto(packet, ("255.255.255.255", port))
+
+
+def tv_info():
+    """Infos de la TV via l'API REST (sert aussi de test « allumée ? »)."""
+    try:
+        with urllib.request.urlopen(f"http://{TV_IP}:8001/api/v2/", timeout=2) as res:
+            data = json.loads(res.read().decode("utf-8"))
+            device = data.get("device", {})
+            return {"name": data.get("name") or device.get("name"), "model": device.get("modelName")}
+    except Exception:
+        return None
+
+
+# ==================== Routes ====================
+
+def result(ok, error=None, **extra):
+    body = {"success": ok, **extra}
+    if error:
+        body["error"] = error
+    return jsonify(body), (200 if ok else 503)
+
+
+@app.route("/")
 def index():
-    """Servir l'interface HTML principale"""
-    return send_from_directory(FRONTEND_DIR, 'index.html')
+    return send_from_directory(FRONTEND_DIR, "index.html")
 
-@app.route('/css/<path:filename>')
-def serve_css(filename):
-    """Servir les fichiers CSS"""
-    return send_from_directory(os.path.join(FRONTEND_DIR, 'css'), filename)
 
-@app.route('/js/<path:filename>')
-def serve_js(filename):
-    """Servir les fichiers JavaScript"""
-    return send_from_directory(os.path.join(FRONTEND_DIR, 'js'), filename)
+@app.route("/<path:filename>")
+def static_files(filename):
+    return send_from_directory(FRONTEND_DIR, filename)
 
-@app.route('/key/<cmd>')
+
+@app.route("/key/<cmd>", methods=["GET", "POST"])
 def key_route(cmd):
-    """
-    Endpoint pour envoyer une touche de télécommande
-    
-    Args:
-        cmd (str): Code de la touche (ex: KEY_UP, KEY_DOWN, etc.)
-    
-    Returns:
-        JSON: {"success": bool, "cmd": str}
-    """
-    if cmd in KEYS.values():
-        success = send_key(cmd)
-    else:
-        success = False
-    return jsonify({"success": success, "cmd": cmd})
+    if cmd not in VALID_KEYS:
+        return jsonify({"success": False, "error": "Touche inconnue", "cmd": cmd}), 400
+    ok, err = send_key(cmd)
+    return result(ok, err, cmd=cmd)
 
-@app.route('/app/<app_name>')
+
+@app.route("/app/<app_name>", methods=["GET", "POST"])
 def app_route(app_name):
-    """
-    Endpoint pour lancer une application
-    
-    Args:
-        app_name (str): Nom de l'application (ex: NETFLIX, YOUTUBE, etc.)
-    
-    Returns:
-        JSON: {"success": bool, "app": str, "app_id": str}
-    """
     app_id = APPS.get(app_name.upper())
-    if app_id:
-        success = launch_app(app_id)
-        return jsonify({"success": success, "app": app_name, "app_id": app_id})
-    return jsonify({"success": False, "error": "App non trouvée"}), 404
+    if not app_id:
+        return jsonify({"success": False, "error": "App non trouvée"}), 404
+    ok, err = launch_app(app_id)
+    return result(ok, err, app=app_name, app_id=app_id)
 
-@app.route('/apps')
+
+@app.route("/power/on", methods=["POST"])
+def power_on():
+    if not TV_MAC:
+        return jsonify({"success": False, "error": "TV_MAC non configurée"}), 400
+    try:
+        wake_on_lan(TV_MAC)
+    except Exception as e:
+        return result(False, str(e))
+    return result(True)
+
+
+@app.route("/apps")
 def list_apps():
-    """Lister toutes les applications disponibles"""
-    apps_list = [{"name": name, "app_id": app_id} for name, app_id in APPS.items()]
-    return jsonify({"apps": apps_list})
+    return jsonify({"apps": [{"name": n, "app_id": i} for n, i in APPS.items()]})
 
-@app.route('/keys')
+
+@app.route("/keys")
 def list_keys():
-    """Lister toutes les touches disponibles"""
-    keys_list = [{"name": name, "code": code} for name, code in KEYS.items()]
-    return jsonify({"keys": keys_list})
+    return jsonify({"keys": [{"name": n, "code": c} for n, c in KEYS.items()]})
 
-@app.route('/status')
+
+@app.route("/status")
 def status():
-    """État de l'application"""
+    info = tv_info()
     return jsonify({
         "status": "online",
         "tv_ip": TV_IP,
-        "tv_port": TV_PORT,
-        "token_saved": TV_TOKEN is not None
+        "tv_port": tv.port or TV_PORT,
+        "tv_reachable": info is not None,
+        "tv": info,
+        "connected": tv.connected,
+        "token_saved": tv.token is not None,
+        "wol_enabled": bool(TV_MAC),
+        "last_error": tv.last_error,
     })
 
-@app.errorhandler(404)
-def not_found(error):
-    """Gestionnaire d'erreur 404"""
-    return jsonify({"error": "Not Found", "message": "L'endpoint n'existe pas"}), 404
 
-@app.errorhandler(500)
-def server_error(error):
-    """Gestionnaire d'erreur 500"""
-    return jsonify({"error": "Server Error", "message": "Une erreur serveur s'est produite"}), 500
+@app.route("/health")
+def health():
+    return jsonify({"ok": True})
+
+
+@app.errorhandler(404)
+def not_found(_):
+    return jsonify({"error": "Not Found", "path": request.path}), 404
+
 
 # ==================== Démarrage ====================
 
-if __name__ == '__main__':
-    print("\n" + "="*50)
+def local_ips():
+    ips = set()
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect((TV_IP, 9))
+            ips.add(s.getsockname()[0])
+    except OSError:
+        pass
+    return sorted(ips) or ["localhost"]
+
+
+def main():
+    print("\n" + "=" * 50)
     print("🎮 Samsung TV Remote Control")
-    print("="*50)
-    
-    # Charger le token existant
-    load_token()
-    
-    # Afficher les informations de démarrage
-    print(f"\n📡 Configuration:")
-    print(f"   TV IP : {TV_IP}:{TV_PORT}")
-    print(f"   Accès : http://{FLASK_HOST}:{FLASK_PORT}")
-    print(f"   Debug : {FLASK_DEBUG}")
-    
-    print(f"\n✅ Serveur en cours de démarrage...")
-    print(f"   Ouvrez http://localhost:{FLASK_PORT} dans votre navigateur")
-    print(f"   Appuyez sur Ctrl+C pour arrêter")
-    print("\n" + "="*50 + "\n")
-    
-    # Démarrer l'application Flask
-    app.run(
-        host=FLASK_HOST,
-        port=FLASK_PORT,
-        debug=FLASK_DEBUG,
-        use_reloader=FLASK_DEBUG
-    )
+    print("=" * 50)
+    print(f"📡 TV      : {TV_IP} (port {TV_PORT}, repli auto)")
+    print(f"⚡ Allumage : {'Wake-on-LAN ' + TV_MAC if TV_MAC else 'désactivé (TV_MAC vide)'}")
+    for ip in local_ips():
+        print(f"📱 Ouvre sur ton téléphone : http://{ip}:{FLASK_PORT}")
+    print("=" * 50 + "\n")
+    app.run(host=FLASK_HOST, port=FLASK_PORT, debug=FLASK_DEBUG,
+            use_reloader=FLASK_DEBUG, threaded=True)
+
+
+if __name__ == "__main__":
+    main()

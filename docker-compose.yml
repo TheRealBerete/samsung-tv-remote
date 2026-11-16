@@ -1,0 +1,24 @@
+services:
+  tv-remote:
+    build: .
+    image: samsung-tv-remote:latest
+    container_name: samsung-tv-remote
+    restart: unless-stopped
+    # Réseau de l'hôte : nécessaire pour joindre la TV sur le réseau local
+    # et pour envoyer le Wake-on-LAN (broadcast UDP).
+    # ⚠️ Fonctionne pleinement sur Linux (PC, Raspberry Pi, NAS).
+    network_mode: host
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      TV_IP: ${TV_IP:-192.168.18.49}
+      TV_PORT: ${TV_PORT:-8002}
+      TV_MAC: ${TV_MAC:-}
+      FLASK_PORT: ${FLASK_PORT:-5000}
+      TOKEN_FILE: /data/token.txt
+    volumes:
+      - tv-remote-data:/data   # garde le token d'autorisation entre les redémarrages
+
+volumes:
+  tv-remote-data:

@@ -1,110 +1,153 @@
 /**
- * Samsung TV Remote Pro - Frontend JavaScript
- * Gère les interactions avec l'API du backend
+ * TV Remote — frontend
+ * Envoie les touches au backend Flask et reflète l'état de la TV.
  */
+(() => {
+  const API = "";
+  const led = document.getElementById("led");
+  const statusEl = document.getElementById("status");
+  const statusLabel = statusEl.querySelector(".label");
+  const toastEl = document.getElementById("toast");
 
-const API_BASE = '';
+  let state = { tv_reachable: null, wol_enabled: false };
+  let toastTimer, ledTimer;
 
-/**
- * Envoyer une touche de télécommande
- * @param {string} key - Code de la touche (ex: KEY_UP)
- */
-async function sendKey(key) {
+  // ---------- Retours visuels ----------
+  function flash(ok = true) {
+    clearTimeout(ledTimer);
+    led.classList.remove("flash", "err");
+    void led.offsetWidth; // relance l'animation
+    led.classList.add(ok ? "flash" : "err");
+    ledTimer = setTimeout(() => led.classList.remove("flash", "err"), ok ? 90 : 600);
+  }
+
+  function haptic() {
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 3200);
+  }
+
+  function setStatus(kind, text) {
+    statusEl.className = "status is-" + kind;
+    statusLabel.textContent = text;
+  }
+
+  // ---------- API ----------
+  async function call(path) {
     try {
-        const response = await fetch(`${API_BASE}/key/${key}`);
-        const data = await response.json();
-
-        if (data.success) {
-            // Vibration haptique si disponible
-            if (navigator.vibrate) {
-                navigator.vibrate(15);
-            }
-            console.log(`✅ Touche envoyée : ${key}`);
-        } else {
-            console.error(`❌ Échec : ${key}`);
-        }
-    } catch (error) {
-        console.error('Erreur lors de l\'envoi de la touche:', error);
+      const res = await fetch(API + path, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || `Erreur ${res.status}`);
+      flash(true);
+      return true;
+    } catch (e) {
+      flash(false);
+      toast(e.message === "Failed to fetch" ? "Serveur injoignable. Le PC est-il allumé ?" : e.message);
+      refreshStatus();
+      return false;
     }
-}
+  }
 
-/**
- * Lancer une application sur la TV
- * @param {string} appName - Nom de l'application (ex: NETFLIX)
- */
-async function launchApp(appName) {
+  const sendKey = (key) => call(`/key/${key}`);
+  const launchApp = (name) => call(`/app/${name}`);
+
+  async function power() {
+    // TV éteinte (pas de réponse réseau) → Wake-on-LAN, sinon KEY_POWER
+    if (state.tv_reachable === false && state.wol_enabled) {
+      flash(true);
+      await call("/power/on");
+      toast("Allumage en cours…");
+      setTimeout(refreshStatus, 6000);
+      return;
+    }
+    await sendKey("KEY_POWER");
+    setTimeout(refreshStatus, 4000);
+  }
+
+  async function refreshStatus() {
     try {
-        const response = await fetch(`${API_BASE}/app/${appName}`);
-        const data = await response.json();
-
-        if (data.success) {
-            // Vibration plus longue pour la confirmation
-            if (navigator.vibrate) {
-                navigator.vibrate([15, 10, 15]);
-            }
-            console.log(`✅ Lancement de ${appName} (${data.app_id})`);
-        } else {
-            console.error(`❌ Échec : ${data.error}`);
-        }
-    } catch (error) {
-        console.error('Erreur lors du lancement de l\'app:', error);
+      const res = await fetch(API + "/status");
+      state = await res.json();
+      if (state.tv_reachable) {
+        const name = state.tv && (state.tv.model || state.tv.name);
+        setStatus("ok", name ? `Connecté · ${name}` : "TV connectée");
+      } else if (state.wol_enabled) {
+        setStatus("warn", "TV en veille · appuie sur ⏻");
+      } else {
+        setStatus("off", `TV introuvable (${state.tv_ip})`);
+      }
+    } catch {
+      setStatus("off", "Serveur hors ligne");
     }
-}
+  }
 
-/**
- * Mettre à jour le statut de la TV
- */
-async function updateStatus() {
-    try {
-        const response = await fetch(`${API_BASE}/status`);
-        const data = await response.json();
-        
-        console.log('État de la TV:', data);
-        
-        // Mettre à jour l'interface selon le statut
-        const statusEl = document.querySelector('.status');
-        if (data.status === 'online') {
-            statusEl.style.opacity = '1';
-        } else {
-            statusEl.style.opacity = '0.5';
-        }
-    } catch (error) {
-        console.warn('Impossible de vérifier le statut:', error);
-    }
-}
+  // ---------- Appui / maintien ----------
+  function bindPress(el, action, repeat) {
+    let timer = null;
+    let holding = false;
+    const rocker = el.closest(".rocker");
+    const tilt = rocker && (el === rocker.firstElementChild ? "tilt-up" : "tilt-down");
 
-/**
- * Initialiser l'application
- */
-function init() {
-    // Enregistrer les événements click sur les boutons de navigation
-    document.querySelectorAll('[data-key]').forEach(button => {
-        button.addEventListener('click', (event) => {
-            event.preventDefault();
-            const key = button.getAttribute('data-key');
-            sendKey(key);
-        });
-    });
+    const loop = async () => {
+      if (!holding) return;
+      await action();
+      if (holding) timer = setTimeout(loop, 110);
+    };
 
-    // Enregistrer les événements click sur les boutons d'applications
-    document.querySelectorAll('[data-app]').forEach(button => {
-        button.addEventListener('click', (event) => {
-            event.preventDefault();
-            const appName = button.getAttribute('data-app');
-            launchApp(appName);
-        });
-    });
+    const down = (e) => {
+      e.preventDefault();
+      el.setPointerCapture?.(e.pointerId);
+      holding = true;
+      el.classList.add("is-down");
+      if (tilt) rocker.classList.add(tilt);
+      haptic();
+      action();
+      if (repeat) timer = setTimeout(loop, 420);
+    };
+    const up = () => {
+      holding = false;
+      clearTimeout(timer);
+      el.classList.remove("is-down");
+      if (tilt) rocker.classList.remove(tilt);
+    };
 
-    // Mettre à jour le statut au démarrage et périodiquement
-    updateStatus();
-    setInterval(updateStatus, 30000); // Toutes les 30 secondes
+    el.addEventListener("pointerdown", down);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+    el.addEventListener("lostpointercapture", up);
+    el.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
 
-    console.log('🎮 Samsung TV Remote Pro - Initialisée');
-}
+  document.querySelectorAll("[data-key]").forEach((el) => {
+    const key = el.dataset.key;
+    const action = key === "KEY_POWER" ? power : () => sendKey(key);
+    bindPress(el, action, el.hasAttribute("data-repeat"));
+  });
 
-// Initialiser quand le DOM est prêt
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
+  document.querySelectorAll("[data-app]").forEach((el) => {
+    bindPress(el, () => launchApp(el.dataset.app), false);
+  });
+
+  statusEl.addEventListener("click", refreshStatus);
+
+  // ---------- Clavier (pratique sur ordinateur) ----------
+  const KEYMAP = {
+    ArrowUp: "KEY_UP", ArrowDown: "KEY_DOWN", ArrowLeft: "KEY_LEFT", ArrowRight: "KEY_RIGHT",
+    Enter: "KEY_ENTER", Backspace: "KEY_RETURN", Escape: "KEY_EXIT", h: "KEY_HOME",
+    "+": "KEY_VOLUP", "-": "KEY_VOLDOWN", m: "KEY_MUTE", " ": "KEY_PLAY",
+  };
+  document.addEventListener("keydown", (e) => {
+    const key = KEYMAP[e.key];
+    if (key) { e.preventDefault(); sendKey(key); }
+  });
+
+  // ---------- Démarrage ----------
+  refreshStatus();
+  setInterval(() => { if (!document.hidden) refreshStatus(); }, 15000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshStatus(); });
+})();
